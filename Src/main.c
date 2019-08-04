@@ -72,7 +72,8 @@ float speed_l = 0;
 int value1, value2, value3, value4;
 int mode = 0;
 int cnt = 0;
-int target_speed = 0;
+int target_speed_l = 0;
+int target_speed_r = 0;
 int pulse_l, pulse_r;
 
 float epsilon_sum = 0; //偏差積分値
@@ -154,7 +155,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		TIM4 -> CNT = 0;
 		TIM8 -> CNT = 0;
 
-		epsilon_l = target_speed - speed_l;
+		epsilon_l = target_speed_l - speed_l;
 		pulse_l = Kp * epsilon_l;
 		if(pulse_l < 0){
 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);		//L_CW
@@ -175,7 +176,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 		}
 
-		epsilon_r = target_speed - speed_r;
+		epsilon_r = target_speed_r - speed_r;
 		pulse_r = Kp * epsilon_r;
 		if(pulse_r < 0){
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);		//R_CW
@@ -1012,7 +1013,7 @@ if(cnt >= 101){
 	buzzer(DOO, 500);
 */
 
-//speed control
+/*speed control
 	for(int i = 0; i < 3; i++){
 		HAL_Delay(500);
 		target_speed = 200;
@@ -1025,6 +1026,24 @@ if(cnt >= 101){
 	}
 
 	while(1);
+*/
+
+//turn Right
+	for(int i = 0; i < 3; i++){
+		HAL_Delay(500);
+		target_speed_l = 200;
+		target_speed_r = 200;
+		while(dist_l < 300 && dist_r < 300);
+
+		target_speed_l = -200;
+		target_speed_r = -200;
+		while(dist_l > 0 && dist_r > 0);
+
+		target_speed_l = 0;
+		target_speed_r = 0;
+	}
+
+		while(1);
 
 
     /* USER CODE END WHILE */

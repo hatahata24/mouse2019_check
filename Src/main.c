@@ -69,8 +69,9 @@ float cnt_l = 0;
 float dist_l = 0;
 float speed_l = 0;
 
-//int mode = 0;
-//int value1, value2, value3, value4;
+int value1, value2, value3, value4;
+int mode = 0;
+int cnt = 0;
 
 //#define NUMBER_OF_VRS 4
 //static uint16_t vr_values[NUMBER_OF_VRS];
@@ -224,16 +225,17 @@ int main(void)
 
   printf("Welcome to WMMC !\n");
 
-  int mode = 0;
+//  int mode = 0;
+//  int cnt = 0;
   int val = 0;
 
   setbuf(stdout, NULL);
 
-  int value1 = 0;
+/*  int value1 = 0;
   int value2 = 0;
   int value3 = 0;
   int value4 = 0;
-
+*/
   HAL_TIM_Encoder_Start(&htim4,TIM_CHANNEL_ALL);
   HAL_TIM_Encoder_Start(&htim8,TIM_CHANNEL_ALL);
 
@@ -459,16 +461,11 @@ int main(void)
 	}
 */
 
-//AD change check
-	value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);
-	value2 = get_adc_value(&hadc1, ADC_CHANNEL_1);
-	value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);
-	value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);
-
-	printf("%d, %d, %d, %d\n", value1, value2, value3, value4);
-	HAL_Delay(100);
+/*AD change check
+	HAL_Delay(1);
 
 	mode++;
+	cnt++;
 	mode = mode%2;
 
 	switch(mode){
@@ -486,8 +483,55 @@ int main(void)
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
 		break;
 	}
-//	printf("%d, %d, %d, %d\n", value1, value2, value3, value4);
-//	HAL_Delay(100);
+
+	value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);	//FR
+	value2 = get_adc_value(&hadc1, ADC_CHANNEL_1);	//R
+	value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);	//FL
+	value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);	//L
+	if(cnt >= 101){
+		printf("FR:%3d, R:%3d, FL:%3d, L:%3d\n", value1, value2, value3, value4);
+		cnt = 0;
+	}
+*/
+
+//AD change check
+	HAL_Delay(1);
+
+	mode++;
+	cnt++;
+	mode = mode%2;
+
+	switch(mode){
+	  case 0:
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
+			value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);	//FR
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   //R
+			value2 = get_adc_value(&hadc1, ADC_CHANNEL_1);	//R
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+		break;
+
+	  case 1:
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);  //L
+			value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);	//FL
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);  //FL
+			value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);	//L
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
+		break;
+
+/*	  case 2:
+		break;
+
+	  case 3:
+		break;
+*/	}
+
+	if(cnt >= 101){
+		printf("FR:%3d, R:%3d, FL:%3d, L:%3d\n", value1, value2, value3, value4);
+		cnt = 0;
+	}
+
 
 /*AD change x4??
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR

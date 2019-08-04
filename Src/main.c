@@ -1015,19 +1015,11 @@ if(cnt >= 101){
 //speed control
 	for(int i = 0; i < 3; i++){
 		HAL_Delay(500);
-
 		target_speed = 200;
-
 		while(dist_l < 300 && dist_r < 300);
 
 		target_speed = -200;
-
 		while(dist_l > 0 && dist_r > 0);
-
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
 
 		target_speed = 0;
 	}

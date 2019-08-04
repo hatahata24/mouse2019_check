@@ -72,6 +72,17 @@ float speed_l = 0;
 int value1, value2, value3, value4;
 int mode = 0;
 int cnt = 0;
+int target_speed = 0;
+int pulse_l, pulse_r;
+
+float epsilon_sum = 0; //偏差積分値
+float old_epsilon = 0; //前回の偏差
+float epsilon_dif = 0; //偏差微分値
+float epsilon_l = 0;     //偏差
+float epsilon_r = 0;     //偏差
+float Kp = 4;
+float Ti = 1000.0;
+float Td = 0;
 
 //#define NUMBER_OF_VRS 4
 //static uint16_t vr_values[NUMBER_OF_VRS];
@@ -109,24 +120,11 @@ int __io_putchar(int c) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-
-/*	TIM_OC_InitTypeDef ConfigOC;
+	TIM_OC_InitTypeDef ConfigOC;
 	ConfigOC.OCMode = TIM_OCMODE_PWM1;
 	ConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
 	ConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 
-	if(htim == &htim3){
-
-		int period2;
-		period2 = 10000;
-		TIM3 -> ARR = period2;
-
-	    ConfigOC.Pulse = period2 / 2;
-	    HAL_TIM_PWM_ConfigChannel(&htim3, &ConfigOC, TIM_CHANNEL_2);
-	    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-
-	}
-*/
 	if(htim == &htim6){
 /*	  ledOn ++;
 	  ledOn = ledOn % 2;
@@ -156,6 +154,50 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		TIM4 -> CNT = 0;
 		TIM8 -> CNT = 0;
 
+		epsilon_l = target_speed - speed_l;
+		pulse_l = Kp * epsilon_l;
+		if(pulse_l < 0){
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);		//L_CW
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);			//L_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+			ConfigOC.Pulse = -pulse_l;
+			HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+		}
+		else if(pulse_l > 0){
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);	//L_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+			ConfigOC.Pulse = pulse_l;
+			HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+		}
+
+		epsilon_r = target_speed - speed_r;
+		pulse_r = Kp * epsilon_r;
+		if(pulse_r < 0){
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);		//R_CW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);		//R_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+			ConfigOC.Pulse = -pulse_r;
+			HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
+			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
+		}
+		else if(pulse_r > 0){
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);	//R_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+			ConfigOC.Pulse = pulse_r;
+			HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
+			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
+		}
+
+
+		//ADchange interrupt
 		mode++;
 		cnt++;
 		mode = mode%2;
@@ -179,30 +221,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
 			break;
 		}
-		/*value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);
-		value2 = get_adc_value(&hadc1, ADC_CHANNEL_1);
-		value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);
-		value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);
-
-		mode++;
-		mode = mode%2;
-
-		switch(mode){
-		  case 0:
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   //R
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);  //L
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);  //FL
-			break;
-
-		  case 1:
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
-			break;
-		}
-		*/
 	}
 }
 
@@ -248,27 +266,20 @@ int main(void)
 
   printf("Welcome to WMMC !\n");
 
-//  int mode = 0;
-//  int cnt = 0;
   int val = 0;
 
   setbuf(stdout, NULL);
 
-/*  int value1 = 0;
-  int value2 = 0;
-  int value3 = 0;
-  int value4 = 0;
-*/
   HAL_TIM_Encoder_Start(&htim4,TIM_CHANNEL_ALL);
   HAL_TIM_Encoder_Start(&htim8,TIM_CHANNEL_ALL);
 
   int pulse = 0;
 
-  TIM_OC_InitTypeDef ConfigOC;
+/*  TIM_OC_InitTypeDef ConfigOC;
   ConfigOC.OCMode = TIM_OCMODE_PWM1;
   ConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   ConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-
+*/
   HAL_TIM_Base_Start_IT(&htim6);
 
   /* USER CODE END 2 */
@@ -517,44 +528,12 @@ int main(void)
 	}
 */
 
-//AD change check
-	HAL_Delay(1);
-
-/*	mode++;
-	cnt++;
-	mode = mode%2;
-
-	switch(mode){
-	  case 0:
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
-			value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);	//FR
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   //R
-			value2 = get_adc_value(&hadc1, ADC_CHANNEL_1);	//R
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-		break;
-
-	  case 1:
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);  //L
-			value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);	//FL
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);  //FL
-			value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);	//L
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
-		break;
+/*AD change interrupt check
+if(cnt >= 101){
+	printf("FR:%3d, R:%3d, FL:%3d, L:%3d\n", value1, value2, value3, value4);
+	cnt = 0;
+}
 */
-/*	  case 2:
-		break;
-
-	  case 3:
-		break;
-	}
-*/
-	if(cnt >= 101){
-		printf("FR:%3d, R:%3d, FL:%3d, L:%3d\n", value1, value2, value3, value4);
-		cnt = 0;
-	}
-
 
 /*AD change x4??
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
@@ -1032,6 +1011,29 @@ int main(void)
 	buzzer(SI, 500);
 	buzzer(DOO, 500);
 */
+
+//speed control
+	for(int i = 0; i < 3; i++){
+		HAL_Delay(500);
+
+		target_speed = 200;
+
+		while(dist_l < 300 && dist_r < 300);
+
+		target_speed = -200;
+
+		while(dist_l > 0 && dist_r > 0);
+
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
+
+		target_speed = 0;
+	}
+
+	while(1);
+
 
     /* USER CODE END WHILE */
 

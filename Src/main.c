@@ -41,6 +41,7 @@
 /* USER CODE BEGIN PD */
 
 #define DIAMETER 23.5
+#define TREAD 60
 
 /* USER CODE END PD */
 
@@ -1016,21 +1017,6 @@ if(cnt >= 101){
 /*speed control
 	for(int i = 0; i < 3; i++){
 		HAL_Delay(500);
-		target_speed = 200;
-		while(dist_l < 300 && dist_r < 300);
-
-		target_speed = -200;
-		while(dist_l > 0 && dist_r > 0);
-
-		target_speed = 0;
-	}
-
-	while(1);
-*/
-
-//turn Right
-	for(int i = 0; i < 3; i++){
-		HAL_Delay(500);
 		target_speed_l = 200;
 		target_speed_r = 200;
 		while(dist_l < 300 && dist_r < 300);
@@ -1043,7 +1029,30 @@ if(cnt >= 101){
 		target_speed_r = 0;
 	}
 
-		while(1);
+	while(1);
+*/
+
+//turn Right
+	for(int i = 0; i < 4; i++){
+		HAL_Delay(500);
+	    if(i == 0) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+	    if(i == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);
+	    if(i == 2) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+
+		target_speed_l = 200;
+		target_speed_r = -200;
+		while(dist_l < (TREAD*M_PI/4) && dist_r < (TREAD*M_PI/4));
+
+		target_speed_l = 0;
+		target_speed_r = 0;
+	    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+	    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
+	    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+	    dist_l = 0;
+	    dist_r = 0;
+	}
+
+	while(1);
 
 
     /* USER CODE END WHILE */

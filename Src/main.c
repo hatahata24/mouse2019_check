@@ -1032,7 +1032,7 @@ if(cnt >= 101){
 	while(1);
 */
 
-//turn Right
+/*turn Right
 	for(int i = 0; i < 4; i++){
 		HAL_Delay(500);
 	    if(i == 0) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
@@ -1048,6 +1048,35 @@ if(cnt >= 101){
 	    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
 	    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
 	    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+	    dist_l = 0;
+	    dist_r = 0;
+	}
+
+	while(1);
+*/
+
+//slalom R
+	for(int i = 0; i < 4; i++){
+		HAL_Delay(500);
+
+		target_speed_l = 200;
+		target_speed_r = 200;
+		while(dist_l < 60 && dist_r < 60);
+
+		target_speed_l = 400;
+		target_speed_r = 50;
+	    dist_l = 0;
+	    dist_r = 0;
+		while((dist_l+dist_r)/2 < (TREAD*M_PI/3));
+
+		target_speed_l = 200;
+		target_speed_r = 200;
+	    dist_l = 0;
+	    dist_r = 0;
+		while(dist_l < 60 && dist_r < 60);
+
+		target_speed_l = 0;
+		target_speed_r = 0;
 	    dist_l = 0;
 	    dist_r = 0;
 	}

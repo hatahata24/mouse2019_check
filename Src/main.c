@@ -24,7 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include <string.h>
+//#include <string.h>
 #include "math.h"
 
 #define MAIN_C_
@@ -42,6 +42,7 @@
 
 #define DIAMETER 23.5
 #define TREAD 60
+#define sensor_wait 3000
 
 /* USER CODE END PD */
 
@@ -77,11 +78,11 @@ int target_speed_l = 0;
 int target_speed_r = 0;
 int pulse_l, pulse_r;
 
-float epsilon_sum = 0; //偏差積分値
-float old_epsilon = 0; //前回の偏差
-float epsilon_dif = 0; //偏差微分値
-float epsilon_l = 0;     //偏差
-float epsilon_r = 0;     //偏差
+float epsilon_sum = 0; 	//dif sum
+float old_epsilon = 0; 	//
+float epsilon_dif = 0;	//dif of dif
+float epsilon_l = 0; 	//dif between target & current
+float epsilon_r = 0;	//dif between target & current
 float Kp = 4;
 float Ti = 1000.0;
 float Td = 0;
@@ -200,27 +201,34 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 
 		//ADchange interrupt
+		uint16_t delay = 0;
 		mode++;
 		cnt++;
 		mode = mode%2;
 
 		switch(mode){
 		  case 0:
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
-				value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);	//FR
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);  //L
+				for(delay=0; delay<sensor_wait; delay++);
+				value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);	//L
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
+
 				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   //R
+				for(delay=0; delay<sensor_wait; delay++);
 				value2 = get_adc_value(&hadc1, ADC_CHANNEL_1);	//R
 				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
 			break;
 
 		  case 1:
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);  //L
-				value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);	//FL
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);  //FL
-				value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);	//L
+				for(delay=0; delay<sensor_wait; delay++);
+				value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);	//FL
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
+
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
+				for(delay=0; delay<sensor_wait; delay++);
+				value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);	//FR
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
 			break;
 		}
 	}
@@ -530,12 +538,12 @@ int main(void)
 	}
 */
 
-/*AD change interrupt check
+//AD change interrupt check
 if(cnt >= 101){
 	printf("FR:%3d, R:%3d, FL:%3d, L:%3d\n", value1, value2, value3, value4);
 	cnt = 0;
 }
-*/
+
 
 /*AD change x4??
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
@@ -1055,7 +1063,7 @@ if(cnt >= 101){
 	while(1);
 */
 
-//slalom R
+/*slalom R
 	for(int i = 0; i < 4; i++){
 		HAL_Delay(500);
 
@@ -1082,7 +1090,7 @@ if(cnt >= 101){
 	}
 
 	while(1);
-
+*/
 
     /* USER CODE END WHILE */
 
@@ -1112,7 +1120,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 64;
+  RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -1125,10 +1133,10 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
     Error_Handler();
   }
@@ -1154,7 +1162,7 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
@@ -1267,7 +1275,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 64-1;
+  htim3.Init.Prescaler = 84-1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 0;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -1373,9 +1381,9 @@ static void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 6400-1;
+  htim6.Init.Prescaler = 84-1;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 10-1;
+  htim6.Init.Period = 1000-1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -1562,10 +1570,10 @@ void buzzer(int sound, int length){
 
 //+++++++++++++++++++++++++++++++++++++++++++++++
 //get_adc_value
-// 指定されたチャンネルのアナログ電圧値を取り出す
-// 引数1：hadc …… 電圧値を取り出すチャンネルが属すADCのHandler
-// 引数2：channel …… 電圧値を取り出すチャンネル
-// 戻り値：電圧値（12bit分解能）
+// ?��?定されたチャンネルのアナログ電圧値を取り�??��?��?
+// 引数1??��?��hadc …… 電圧値を取り�??��すチャンネルが属すADCのHandler
+// 引数2??��?��channel …… 電圧値を取り�??��すチャンネル
+// 戻り�??��??��?��電圧値??��?12bit?��?解能??��?
 //+++++++++++++++++++++++++++++++++++++++++++++++
 int get_adc_value(ADC_HandleTypeDef *hadc, uint32_t channel){
 
@@ -1580,9 +1588,9 @@ int get_adc_value(ADC_HandleTypeDef *hadc, uint32_t channel){
 
   HAL_ADC_ConfigChannel(hadc, &sConfig);
 
-  HAL_ADC_Start(hadc);                    // AD変換を開始する
-  HAL_ADC_PollForConversion(hadc, 100);   // AD変換終了まで待機する
-  return HAL_ADC_GetValue(hadc);          // AD変換結果を取得する
+  HAL_ADC_Start(hadc);                    // AD変換を開始す?��?
+  HAL_ADC_PollForConversion(hadc, 100);   // AD変換終�?まで?��?機す?��?
+  return HAL_ADC_GetValue(hadc);          // AD変換結果を取得す?��?
 }
 
 /*HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)

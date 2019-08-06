@@ -160,8 +160,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		epsilon_l = target_speed_l - speed_l;
 		pulse_l = Kp * epsilon_l;
 		if(pulse_l < 0){
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);		//L_CW
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);			//L_CCW
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
 
 			ConfigOC.Pulse = -pulse_l;
@@ -181,8 +181,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		epsilon_r = target_speed_r - speed_r;
 		pulse_r = Kp * epsilon_r;
 		if(pulse_r < 0){
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);		//R_CW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);		//R_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
 
 			ConfigOC.Pulse = -pulse_r;
@@ -285,11 +285,11 @@ int main(void)
 
   int pulse = 0;
 
-/*  TIM_OC_InitTypeDef ConfigOC;
+  TIM_OC_InitTypeDef ConfigOC;
   ConfigOC.OCMode = TIM_OCMODE_PWM1;
   ConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   ConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-*/
+
   HAL_TIM_Base_Start_IT(&htim6);
 
   /* USER CODE END 2 */
@@ -538,12 +538,12 @@ int main(void)
 	}
 */
 
-//AD change interrupt check
+/*AD change interrupt check
 if(cnt >= 101){
 	printf("FR:%3d, R:%3d, FL:%3d, L:%3d\n", value1, value2, value3, value4);
 	cnt = 0;
 }
-
+*/
 
 /*AD change x4??
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
@@ -977,7 +977,7 @@ if(cnt >= 101){
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);	//R_CCW
 
-	pulse = 30;
+	pulse = 50;
 
 	ConfigOC.Pulse = pulse;
 	HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
@@ -1022,7 +1022,7 @@ if(cnt >= 101){
 	buzzer(DOO, 500);
 */
 
-/*speed control
+//speed control
 	for(int i = 0; i < 3; i++){
 		HAL_Delay(500);
 		target_speed_l = 200;
@@ -1038,7 +1038,7 @@ if(cnt >= 101){
 	}
 
 	while(1);
-*/
+
 
 /*turn Right
 	for(int i = 0; i < 4; i++){

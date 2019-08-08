@@ -158,47 +158,54 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		TIM4 -> CNT = 0;
 		TIM8 -> CNT = 0;
 
-		epsilon_l = target_speed_l - speed_l;
-		pulse_l = Kp * epsilon_l;
-		if(pulse_l < 0){
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+		if(MF.FLAG.DRV){
+			epsilon_l = target_speed_l - speed_l;
+			pulse_l = Kp * epsilon_l;
+			if(pulse_l < 0){
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
 
-			ConfigOC.Pulse = -pulse_l;
-			HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
-			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+				ConfigOC.Pulse = -pulse_l;
+				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
+				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+			}
+			else if(pulse_l > 0){
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);	//L_CCW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+				ConfigOC.Pulse = pulse_l;
+				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
+				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+			}
+
+			epsilon_r = target_speed_r - speed_r;
+			pulse_r = Kp * epsilon_r;
+			if(pulse_r < 0){
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+				ConfigOC.Pulse = -pulse_r;
+				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
+				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
+			}
+			else if(pulse_r > 0){
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);	//R_CCW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+				ConfigOC.Pulse = pulse_r;
+				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
+				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
+			}
+		}else{
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);			//R_CW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);		//R_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);		//STBY
 		}
-		else if(pulse_l > 0){
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);	//L_CCW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
 
-			ConfigOC.Pulse = pulse_l;
-			HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
-			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
-		}
-
-		epsilon_r = target_speed_r - speed_r;
-		pulse_r = Kp * epsilon_r;
-		if(pulse_r < 0){
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-			ConfigOC.Pulse = -pulse_r;
-			HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
-			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
-		}
-		else if(pulse_r > 0){
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);	//R_CCW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-			ConfigOC.Pulse = pulse_r;
-			HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
-			HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
-		}
 
 
 		//ADchange interrupt
@@ -1006,50 +1013,8 @@ if(cnt >= 101){
 	while(1);
 */
 
-/*voltage check
-    if( HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12) == GPIO_PIN_RESET) {
-       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
-    } else {
-       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
-    }
-*/
-
-/*buzzer
-	buzzer(DO, 500);
-	buzzer(LE, 500);
-	buzzer(MI, 500);
-	buzzer(FA, 500);
-	buzzer(SO, 500);
-	buzzer(LA, 500);
-	buzzer(SI, 500);
-	buzzer(DOO, 500);
-*/
-
-/*buzzer pitagola
-    while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
-
-	buzzer(LE, 200);
-	buzzer(MI, 200);
-	buzzer(RST, 50);
-	buzzer(LE, 200);
-	buzzer(MI, 200);
-	buzzer(RST, 50);
-	buzzer(DOO, 200);
-	buzzer(SI, 200);
-	buzzer(RST, 120);
-	buzzer(SO, 250);
-	buzzer(RST, 1000);
-*/
-
-//buzzer pitagola 2
-    while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
-
-    for(int i=0; i<pita; i++){
-        buzzer(pitagola[i][0], pitagola[i][1]);
-    }
-
-
 /*speed control
+	MF.FLAG.DRV = 1;
 	for(int i = 0; i < 3; i++){
 		HAL_Delay(500);
 		target_speed_l = 200;
@@ -1063,11 +1028,11 @@ if(cnt >= 101){
 		target_speed_l = 0;
 		target_speed_r = 0;
 	}
-
-	while(1);
+	while(1)MF.FLAG.DRV = 0;
 */
 
 /*turn Right
+	MF.FLAG.DRV = 1;
 	for(int i = 0; i < 4; i++){
 		HAL_Delay(500);
 	    if(i == 0) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
@@ -1087,10 +1052,11 @@ if(cnt >= 101){
 	    dist_r = 0;
 	}
 
-	while(1);
+	while(1)MF.FLAG.DRV = 0;
 */
 
 /*slalom R
+	MF.FLAG.DRV = 1;
 	for(int i = 0; i < 4; i++){
 		HAL_Delay(500);
 
@@ -1116,7 +1082,50 @@ if(cnt >= 101){
 	    dist_r = 0;
 	}
 
-	while(1);
+	while(1)MF.FLAG.DRV = 0;
+*/
+
+/*voltage check
+	if( HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12) == GPIO_PIN_RESET) {
+	   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+	} else {
+	   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+	}
+*/
+
+/*buzzer
+	buzzer(DO, 500);
+	buzzer(LE, 500);
+	buzzer(MI, 500);
+	buzzer(FA, 500);
+	buzzer(SO, 500);
+	buzzer(LA, 500);
+	buzzer(SI, 500);
+	buzzer(DOO, 500);
+*/
+
+/*buzzer pitagola
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+
+	buzzer(LE, 200);
+	buzzer(MI, 200);
+	buzzer(RST, 50);
+	buzzer(LE, 200);
+	buzzer(MI, 200);
+	buzzer(RST, 50);
+	buzzer(DOO, 200);
+	buzzer(SI, 200);
+	buzzer(RST, 120);
+	buzzer(SO, 250);
+	buzzer(RST, 1000);
+*/
+
+/*buzzer pitagola 2
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+
+	for(int i=0; i<pita; i++){
+		buzzer(pitagola[i][0], pitagola[i][1]);
+	}
 */
 
     /* USER CODE END WHILE */

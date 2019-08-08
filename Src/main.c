@@ -71,12 +71,13 @@ float cnt_l = 0;
 float dist_l = 0;
 float speed_l = 0;
 
-int value1, value2, value3, value4;
 int mode = 0;
 int cnt = 0;
 int target_speed_l = 0;
 int target_speed_r = 0;
 int pulse_l, pulse_r;
+
+int value1, value2, value3, value4;
 
 float epsilon_sum = 0; 	//dif sum
 float old_epsilon = 0; 	//
@@ -84,7 +85,7 @@ float epsilon_dif = 0;	//dif of dif
 float epsilon_l = 0; 	//dif between target & current
 float epsilon_r = 0;	//dif between target & current
 float Kp = 4;
-float Ti = 1000.0;
+float Ti = 1000;
 float Td = 0;
 
 //#define NUMBER_OF_VRS 4
@@ -260,6 +261,8 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+
+  buzzer_init();
 
   /* USER CODE END SysInit */
 
@@ -1022,7 +1025,31 @@ if(cnt >= 101){
 	buzzer(DOO, 500);
 */
 
-//speed control
+/*buzzer pitagola
+    while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+
+	buzzer(LE, 200);
+	buzzer(MI, 200);
+	buzzer(RST, 50);
+	buzzer(LE, 200);
+	buzzer(MI, 200);
+	buzzer(RST, 50);
+	buzzer(DOO, 200);
+	buzzer(SI, 200);
+	buzzer(RST, 120);
+	buzzer(SO, 250);
+	buzzer(RST, 1000);
+*/
+
+//buzzer pitagola 2
+    while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+
+    for(int i=0; i<pita; i++){
+        buzzer(pitagola[i][0], pitagola[i][1]);
+    }
+
+
+/*speed control
 	for(int i = 0; i < 3; i++){
 		HAL_Delay(500);
 		target_speed_l = 200;
@@ -1038,7 +1065,7 @@ if(cnt >= 101){
 	}
 
 	while(1);
-
+*/
 
 /*turn Right
 	for(int i = 0; i < 4; i++){

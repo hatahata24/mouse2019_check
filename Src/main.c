@@ -1013,23 +1013,23 @@ if(cnt >= 101){
 	while(1);
 */
 
-//speed control
+/*speed control
 	MF.FLAG.DRV = 1;
 	for(int i = 0; i < 1; i++){
 		HAL_Delay(500);
 		target_speed_l = 600;
 		target_speed_r = 600;
 		while(dist_l < 1000 && dist_r < 1000);
-/*
+
 		target_speed_l = -200;
 		target_speed_r = -200;
 		while(dist_l > 0 && dist_r > 0);
-*/
+
 		target_speed_l = 0;
 		target_speed_r = 0;
 	}
-	while(1);//MF.FLAG.DRV = 0;
-
+	while(1);MF.FLAG.DRV = 0;
+*/
 
 /*turn Right
 	MF.FLAG.DRV = 1;

@@ -40,8 +40,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define DIAMETER 23.5
-#define TREAD 60
+#define DIAMETER 24.2//22.5//23.4
+#define TREAD 66
 #define sensor_wait 3000
 
 /* USER CODE END PD */
@@ -73,9 +73,9 @@ float speed_l = 0;
 
 int mode = 0;
 int cnt = 0;
-int target_speed_l = 0;
-int target_speed_r = 0;
-int pulse_l, pulse_r;
+float target_speed_l = 0;
+float target_speed_r = 0;
+float pulse_l, pulse_r;
 
 int value1, value2, value3, value4;
 
@@ -1013,23 +1013,23 @@ if(cnt >= 101){
 	while(1);
 */
 
-/*speed control
+//speed control
 	MF.FLAG.DRV = 1;
-	for(int i = 0; i < 3; i++){
+	for(int i = 0; i < 1; i++){
 		HAL_Delay(500);
-		target_speed_l = 200;
-		target_speed_r = 200;
-		while(dist_l < 300 && dist_r < 300);
-
+		target_speed_l = 600;
+		target_speed_r = 600;
+		while(dist_l < 1000 && dist_r < 1000);
+/*
 		target_speed_l = -200;
 		target_speed_r = -200;
 		while(dist_l > 0 && dist_r > 0);
-
+*/
 		target_speed_l = 0;
 		target_speed_r = 0;
 	}
-	while(1)MF.FLAG.DRV = 0;
-*/
+	while(1);//MF.FLAG.DRV = 0;
+
 
 /*turn Right
 	MF.FLAG.DRV = 1;
@@ -1051,37 +1051,61 @@ if(cnt >= 101){
 	    dist_l = 0;
 	    dist_r = 0;
 	}
-
 	while(1)MF.FLAG.DRV = 0;
 */
 
 /*slalom R
 	MF.FLAG.DRV = 1;
-	for(int i = 0; i < 4; i++){
+	for(int i = 0; i < 8; i++){
 		HAL_Delay(500);
 
 		target_speed_l = 200;
 		target_speed_r = 200;
-		while(dist_l < 60 && dist_r < 60);
+		while(dist_l < 10 && dist_r < 10);
 
 		target_speed_l = 400;
 		target_speed_r = 50;
 	    dist_l = 0;
 	    dist_r = 0;
-		while((dist_l+dist_r)/2 < (TREAD*M_PI/3));
+		while((dist_l+dist_r)/2 < (TREAD*M_PI/2.5));
 
 		target_speed_l = 200;
 		target_speed_r = 200;
 	    dist_l = 0;
 	    dist_r = 0;
-		while(dist_l < 60 && dist_r < 60);
+		while(dist_l < 10 && dist_r < 10);
 
 		target_speed_l = 0;
 		target_speed_r = 0;
 	    dist_l = 0;
 	    dist_r = 0;
 	}
+	while(1)MF.FLAG.DRV = 0;
+*/
 
+/*slalom R2
+	MF.FLAG.DRV = 1;
+	HAL_Delay(500);
+	for(int i = 0; i < 4; i++){
+
+		target_speed_l = 400;//300
+		target_speed_r = 400;//300
+		dist_l = 0;
+		dist_r = 0;
+		while(dist_l < 20 && dist_r < 20);
+
+		target_speed_l = 589;//441;
+		target_speed_r = 211;//158;
+		dist_l = 0;
+		dist_r = 0;
+		while((dist_l+dist_r)/2 < 110*1.2);
+
+		target_speed_l = 400;//300;
+		target_speed_r = 400;//300;
+		dist_l = 0;
+		dist_r = 0;
+		while(dist_l < 20 && dist_r < 20);
+	}
 	while(1)MF.FLAG.DRV = 0;
 */
 

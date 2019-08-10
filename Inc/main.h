@@ -32,6 +32,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#define min(A,B) ((A)>(B))?(B):(A)
+#define max(A,B) ((A)>(B))?(A):(B)
 
 /* USER CODE END Includes */
 

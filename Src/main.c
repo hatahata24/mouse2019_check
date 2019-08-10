@@ -43,6 +43,7 @@
 #define DIAMETER 24.2//22.5//23.4
 #define TREAD 66
 #define sensor_wait 3000
+#define log_allay 200
 
 /* USER CODE END PD */
 
@@ -73,9 +74,21 @@ float speed_l = 0;
 
 int mode = 0;
 int cnt = 0;
-float target_speed_l = 0;
-float target_speed_r = 0;
+int get_cnt = 0;
+
+float target_speed_min_l = 0;
+float target_speed_max_l = 0;
+float target_speed_min_r = 0;
+float target_speed_max_r = 0;
 float pulse_l, pulse_r;
+
+float accel_l = 0;
+float accel_r = 0;
+float current_speed_l = 0;
+float current_speed_r = 0;
+
+int get_speed_l[log_allay];
+int get_speed_r[log_allay];
 
 int value1, value2, value3, value4;
 
@@ -159,7 +172,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		TIM8 -> CNT = 0;
 
 		if(MF.FLAG.DRV){
-			epsilon_l = target_speed_l - speed_l;
+			current_speed_l = current_speed_l + accel_l * 0.001;
+			current_speed_l = max(min(current_speed_l, target_speed_max_l), target_speed_min_l);
+			epsilon_l = current_speed_l - speed_l;
 			pulse_l = Kp * epsilon_l;
 			if(pulse_l < 0){
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
@@ -180,7 +195,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 			}
 
-			epsilon_r = target_speed_r - speed_r;
+			current_speed_r = current_speed_r + accel_r * 0.001;
+			current_speed_r = max(min(current_speed_r, target_speed_max_r), target_speed_min_r);
+			epsilon_r = current_speed_r - speed_r;
 			pulse_r = Kp * epsilon_r;
 			if(pulse_r < 0){
 				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
@@ -200,6 +217,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
 			}
+			if(cnt >= 5 && MF.FLAG.LOG){
+				cnt = 0;
+				if(get_cnt < log_allay){
+					get_speed_l[get_cnt] = speed_l;
+					get_speed_r[get_cnt] = speed_r;
+					get_cnt++;
+				}
+			}
 		}else{
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);			//R_CW
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);		//R_CCW
@@ -207,12 +232,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		}
 
 
-
 		//ADchange interrupt
 		uint16_t delay = 0;
-		mode++;
 		cnt++;
-		mode = mode%2;
+		mode = (mode+1)%2;
 
 		switch(mode){
 		  case 0:
@@ -268,8 +291,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
-  buzzer_init();
 
   /* USER CODE END SysInit */
 
@@ -1029,6 +1050,39 @@ if(cnt >= 101){
 		target_speed_r = 0;
 	}
 	while(1);MF.FLAG.DRV = 0;
+*/
+
+/*accel & speed control & log get
+	HAL_Delay(500);
+	for(int i = 0; i < 1; i++){
+		MF.FLAG.DRV = 1;
+		MF.FLAG.LOG = 1;
+		accel_l = 1000;
+		accel_r = 1000;
+		target_speed_max_l = 500;
+		target_speed_max_r = 500;
+		while(dist_l < 300 && dist_r < 300);
+
+		accel_l = 1000;
+		accel_r = 1000;
+		target_speed_max_l = 0;
+		target_speed_max_r = 0;
+		target_speed_min_l = 0;
+		target_speed_min_r = 0;
+	}
+	MF.FLAG.DRV = 0;
+
+//log print
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+
+	for(int i=0; i<log_allay; i++){
+		printf("l:	%d\n", get_speed_l[i]);
+		HAL_Delay(5);
+	}
+	for(int i=0; i<log_allay; i++){
+		printf("r:	%d\n", get_speed_r[i]);
+		HAL_Delay(5);
+	}
 */
 
 /*turn Right

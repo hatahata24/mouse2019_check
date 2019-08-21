@@ -45,6 +45,14 @@
 #define sensor_wait 3000
 #define log_allay 200
 
+#define WHO_AM_I 0x75
+#define PWR_MGMT_1 0x6B
+#define CONFIG 0x1A
+#define GYRO_CONFIG 0x1B
+#define GYRO_ZOUT_H 0x47
+#define GYRO_ZOUT_L 0x48
+#define GYRO_FACTOR 16.4
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -54,6 +62,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+
+SPI_HandleTypeDef hspi3;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
@@ -118,6 +128,7 @@ static void MX_TIM8_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_SPI3_Init(void);
 /* USER CODE BEGIN PFP */
 void buzzer(int, int);
 int get_adc_value(ADC_HandleTypeDef*, uint32_t);
@@ -265,6 +276,67 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	}
 }
 
+uint8_t read_byte(uint8_t reg)
+{
+  uint8_t ret,val;
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET ); //cs = Low;
+  ret = reg | 0x80;  // MSB = 1
+  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
+  HAL_SPI_Receive(&hspi3,&val,1,100); // read 1byte(read data)
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET );  //cs = High;
+  return val;
+}
+/*
+void write_byte( uint8_t reg, uint8_t val )
+{
+  uint8_t ret;
+  ret = reg & 0x7F ; // MSB = 0
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET); // cs = Low;
+  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
+  HAL_SPI_Transmit(&hspi3, &val,1,100); // read 1byte(write data)
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET); // cs = High;
+}
+
+void mpu6500_init( void )
+{
+  uint8_t who_am_i;
+
+  HAL_Delay(100); // wait start up
+  who_am_i = read_byte(WHO_AM_I); // 1. read who am i
+  printf("\r\n0x%x\r\n",who_am_i); // 2. check who am i value
+
+  // 2. error check
+  if (who_am_i != 0x70){
+    while(1){
+      printf( "gyro_error\r");
+    }
+  }
+
+  HAL_Delay(50); // wait
+  write_byte(PWR_MGMT_1, 0x00); // 3. set pwr_might
+
+  HAL_Delay(50);
+  write_byte(CONFIG, 0x00); // 4. set config
+
+  HAL_Delay(50);
+  write_byte(GYRO_CONFIG, 0x18); // 5. set gyro config
+
+  HAL_Delay(50);
+}
+
+float mpu6500_read_gyro_z( void )
+{
+  int16_t gyro_z;
+  float omega;
+
+  // H:8bit shift, Link h and l
+  gyro_z = (int16_t)( (int16_t)(read_byte(GYRO_ZOUT_H) << 8 ) | read_byte(GYRO_ZOUT_L) );
+
+  omega = (float)( gyro_z / GYRO_FACTOR ); // dps to deg/sec
+
+  return omega;
+}
+*/
 /* USER CODE END 0 */
 
 /**
@@ -284,6 +356,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  //mpu6500_init();
 
   /* USER CODE END Init */
 
@@ -303,6 +376,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM6_Init();
   MX_TIM3_Init();
+  MX_SPI3_Init();
   /* USER CODE BEGIN 2 */
 
   printf("Welcome to WMMC !\n");
@@ -1085,6 +1159,45 @@ if(cnt >= 101){
 	}
 */
 
+/*accel & speed control & log get +deaccel
+	HAL_Delay(500);
+	for(int i = 0; i < 1; i++){
+		MF.FLAG.DRV = 1;
+		MF.FLAG.LOG = 1;
+		accel_l = 1000;
+		accel_r = 1000;
+		target_speed_max_l = 500;
+		target_speed_max_r = 500;
+		while(dist_l < 300 && dist_r < 300);
+
+		accel_l = -1000;
+		accel_r = -1000;
+		target_speed_min_l = -500;
+		target_speed_min_r = -500;
+		while(dist_l > -300 && dist_r > -300);
+
+		accel_l = 1000;
+		accel_r = 1000;
+		target_speed_max_l = 0;
+		target_speed_max_r = 0;
+		target_speed_min_l = 0;
+		target_speed_min_r = 0;
+	}
+	MF.FLAG.DRV = 0;
+
+//log print
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+
+	for(int i=0; i<log_allay; i++){
+		printf("l:	%d\n", get_speed_l[i]);
+		HAL_Delay(5);
+	}
+	for(int i=0; i<log_allay; i++){
+		printf("r:	%d\n", get_speed_r[i]);
+		HAL_Delay(5);
+	}
+*/
+
 /*turn Right
 	MF.FLAG.DRV = 1;
 	for(int i = 0; i < 4; i++){
@@ -1106,6 +1219,54 @@ if(cnt >= 101){
 	    dist_r = 0;
 	}
 	while(1)MF.FLAG.DRV = 0;
+*/
+
+/*turn Right (one wheel active)
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+	MF.FLAG.DRV = 1;
+	HAL_Delay(500);
+	for(int i = 0; i < 1; i++){
+		accel_l = 3000;
+		accel_r = 0;
+		target_speed_max_l = 200;
+		target_speed_max_r = 0;
+		while(dist_l < (TREAD*2*M_PI/4)*1.1);
+
+		accel_l = -3000;
+		target_speed_max_l = 0;
+		//dist_l = 0;
+		//dist_r = 0;
+	}
+	//while(1)MF.FLAG.DRV = 1;
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+	dist_r2 = dist_r * 10;
+	dist_l2 = dist_l * 10;
+	printf("dist_l*10:	%d\n", dist_l2);
+	printf("dist_r*10:	%d\n", dist_r2);
+*/
+
+/*turn Right (two wheel active)
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+	MF.FLAG.DRV = 1;
+	HAL_Delay(500);
+	for(int i = 0; i < 1; i++){
+		accel_l = 10000;
+		accel_r = -10000;
+		target_speed_max_l = 200;
+		target_speed_min_r = -200;
+		while(dist_l < (TREAD*M_PI/4));
+
+		accel_l = -3000;
+		accel_r = 3000;
+		//dist_l = 0;
+		//dist_r = 0;
+	}
+	//while(1)MF.FLAG.DRV = 1;
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+	dist_r2 = dist_r * 10;
+	dist_l2 = dist_l * 10;
+	printf("dist_l*10:	%d\n", dist_l2);
+	printf("dist_r*10:	%d\n", dist_r2);
 */
 
 /*slalom R
@@ -1139,26 +1300,32 @@ if(cnt >= 101){
 
 /*slalom R2
 	MF.FLAG.DRV = 1;
-	HAL_Delay(500);
+	HAL_Delay(5000);
 	for(int i = 0; i < 4; i++){
 
-		target_speed_l = 400;//300
-		target_speed_r = 400;//300
+		accel_l = 3000;
+		accel_r = 3000;
+		target_speed_max_l = 400;
+		target_speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
-		while(dist_l < 20 && dist_r < 20);
+		while(dist_l < 110 && dist_r < 110);
 
-		target_speed_l = 589;//441;
-		target_speed_r = 211;//158;
+		accel_l = 3000;
+		accel_r = -3000;
+		target_speed_max_l = 589;
+		target_speed_min_r = 211;
 		dist_l = 0;
 		dist_r = 0;
-		while((dist_l+dist_r)/2 < 110*1.2);
+		while((dist_l+dist_r)/2 < 110*1);//1.2
 
-		target_speed_l = 400;//300;
-		target_speed_r = 400;//300;
+		accel_l = -3000;
+		accel_r = 3000;
+		target_speed_min_l = 400;
+		target_speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
-		while(dist_l < 20 && dist_r < 20);
+		while(dist_l < 110 && dist_r < 110);
 	}
 	while(1)MF.FLAG.DRV = 0;
 */
@@ -1206,7 +1373,27 @@ if(cnt >= 101){
 	}
 */
 
-    /* USER CODE END WHILE */
+//gyro who am i check
+	uint8_t who_am_i;
+
+	HAL_Delay(100); // wait start up
+	who_am_i = read_byte(WHO_AM_I); // 1. read who am i
+	printf("WHO_AM_I:	0x%x\n",who_am_i); // 2. check who am i value
+	// 2. error check
+	if ( who_am_i != 0x98 ){
+		while(1){
+			printf( "gyro_error\r");
+		}
+	}
+
+
+/*gyro z read
+	int gyro_z2;
+	gyro_z2 = mpu6500_read_gyro_z();
+	printf("gyro_z: %d\n", gyro_z2);
+*/
+
+	/* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -1303,6 +1490,44 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief SPI3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI3_Init(void)
+{
+
+  /* USER CODE BEGIN SPI3_Init 0 */
+
+  /* USER CODE END SPI3_Init 0 */
+
+  /* USER CODE BEGIN SPI3_Init 1 */
+
+  /* USER CODE END SPI3_Init 1 */
+  /* SPI3 parameter configuration*/
+  hspi3.Instance = SPI3;
+  hspi3.Init.Mode = SPI_MODE_MASTER;
+  hspi3.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi3.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi3.Init.NSS = SPI_NSS_SOFT;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi3.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI3_Init 2 */
+
+  /* USER CODE END SPI3_Init 2 */
 
 }
 
@@ -1611,6 +1836,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_2 
@@ -1622,6 +1848,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_10|GPIO_PIN_13 
                           |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PC13 PC14 PC15 PC2 
                            PC3 PC4 PC5 PC9 */
@@ -1660,6 +1889,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PD2 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -1684,10 +1920,10 @@ void buzzer(int sound, int length){
 
 //+++++++++++++++++++++++++++++++++++++++++++++++
 //get_adc_value
-// ?��?定されたチャンネルのアナログ電圧値を取り�??��?��?
-// 引数1??��?��hadc …… 電圧値を取り�??��すチャンネルが属すADCのHandler
-// 引数2??��?��channel …… 電圧値を取り�??��すチャンネル
-// 戻り�??��??��?��電圧値??��?12bit?��?解能??��?
+// ??��?��?定されたチャンネルのアナログ電圧値を取り�???��?��??��?��?
+// 引数1???��?��??��?��hadc …… 電圧値を取り�???��?��すチャンネルが属すADCのHandler
+// 引数2???��?��??��?��channel …… 電圧値を取り�???��?��すチャンネル
+// 戻り�???��?��???��?��??��?��電圧値???��?��?12bit??��?��?解能???��?��?
 //+++++++++++++++++++++++++++++++++++++++++++++++
 int get_adc_value(ADC_HandleTypeDef *hadc, uint32_t channel){
 
@@ -1702,9 +1938,9 @@ int get_adc_value(ADC_HandleTypeDef *hadc, uint32_t channel){
 
   HAL_ADC_ConfigChannel(hadc, &sConfig);
 
-  HAL_ADC_Start(hadc);                    // AD変換を開始す?��?
-  HAL_ADC_PollForConversion(hadc, 100);   // AD変換終�?まで?��?機す?��?
-  return HAL_ADC_GetValue(hadc);          // AD変換結果を取得す?��?
+  HAL_ADC_Start(hadc);                    // AD変換を開始す??��?��?
+  HAL_ADC_PollForConversion(hadc, 100);   // AD変換終�?まで??��?��?機す??��?��?
+  return HAL_ADC_GetValue(hadc);          // AD変換結果を取得す??��?��?
 }
 
 /*HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)

@@ -1397,17 +1397,95 @@ if(cnt >= 101){
 */
 
 //new turn Right
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
 	MF.FLAG.DRV = 1;
-	target_omega_z = 400;
-	accel_l = 3000;
-	accel_r = -3000;
-	target_speed_max_l = target_omega_z/180*M_PI * TREAD/2;
-	target_speed_min_r = -1*target_omega_z/180*M_PI * TREAD/2;
+	HAL_Delay(500);
+	for(int i = 0; i < 16; i++){
+		target_omega_z = 800;
+		accel_l = 3000;
+		accel_r = -3000;
+		target_speed_max_l = target_omega_z/180*M_PI * TREAD/2;
+		target_speed_min_r = -1*target_omega_z/180*M_PI * TREAD/2;
+		degree_z = 0;
+		while(degree_z > -80);
+		accel_l = 3000;
+		accel_r = -3000;
+		target_speed_max_l = 100;
+		target_speed_min_r = -100;
+		degree_z = 0;
+		while(degree_z > -90+80);
 
-	while(degree_z > -90);
+	}
+	while(1)MF.FLAG.DRV = 0;;
 
-	MF.FLAG.DRV = 0;
-	while(1);
+
+/*new slalom R
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+	MF.FLAG.DRV = 1;
+	HAL_Delay(500);
+	for(int i = 0; i < 4; i++){
+
+		accel_l = 3000;
+		accel_r = 3000;
+		target_speed_max_l = 400;
+		target_speed_max_r = 400;
+		dist_l = 0;
+		dist_r = 0;
+		while(dist_l < 40 && dist_r < 40);
+
+		accel_l = 10000;
+		accel_r = -10000;
+		target_speed_max_l = 589;
+		target_speed_min_r = 211;
+		dist_l = 0;
+		dist_r = 0;
+		degree_z = 0;
+		while(degree_z > -90);//1.2
+
+		accel_l = -10000;
+		accel_r = 10000;
+		target_speed_min_l = 400;
+		target_speed_max_r = 400;
+		dist_l = 0;
+		dist_r = 0;
+		while(dist_l < 40 && dist_r < 40);
+	}
+	while(1)MF.FLAG.DRV = 0;
+*/
+
+/*new slalom L
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+	MF.FLAG.DRV = 1;
+	HAL_Delay(500);
+	for(int i = 0; i < 1; i++){
+
+		accel_l = 3000;
+		accel_r = 3000;
+		target_speed_max_l = 400;
+		target_speed_max_r = 400;
+		dist_l = 0;
+		dist_r = 0;
+		while(dist_l < 40 && dist_r < 40);
+
+		accel_l = -10000;
+		accel_r = 10000;
+		target_speed_min_l = 211;
+		target_speed_max_r = 589;
+		dist_l = 0;
+		dist_r = 0;
+		degree_z = 0;
+		while(degree_z < 90);
+
+		accel_l = 10000;
+		accel_r = -10000;
+		target_speed_max_l = 400;
+		target_speed_min_r = 400;
+		dist_l = 0;
+		dist_r = 0;
+		while(dist_l < 40 && dist_r < 40);
+	}
+	while(1)MF.FLAG.DRV = 0;
+*/
 
 	/* USER CODE END WHILE */
 
@@ -1973,7 +2051,7 @@ void icm20689_init(void){
 
   HAL_Delay(100); // wait start up
   who_am_i = read_byte(WHO_AM_I); // 1. read who am i
-  printf("\r\n0x%x\r\n",who_am_i); // 2. check who am i value
+  printf("0x%x\r\n",who_am_i); // 2. check who am i value
 
   // 2. error check
   if (who_am_i != 0x98){
@@ -2020,7 +2098,7 @@ float icm20689_read_gyro_z(void){
   // H:8bit shift, Link h and l
   gyro_z = (int16_t)((int16_t)(read_byte(GYRO_ZOUT_H) << 8) | read_byte(GYRO_ZOUT_L));
 
-  omega = (float)(gyro_z / GYRO_FACTOR + 1.15); // dps to deg/sec
+  omega = (float)(gyro_z / GYRO_FACTOR+1.15); // dps to deg/sec
   return omega;
 }
 

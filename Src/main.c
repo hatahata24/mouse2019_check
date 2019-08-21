@@ -132,13 +132,17 @@ static void MX_SPI3_Init(void);
 /* USER CODE BEGIN PFP */
 void buzzer(int, int);
 int get_adc_value(ADC_HandleTypeDef*, uint32_t);
+void icm20689_init(void);
+uint8_t read_byte(uint8_t reg);
+void write_byte(uint8_t reg, uint8_t val);
+float icm20689_read_gyro_z(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int __io_putchar(int c) {
-  if( c == '\n' ) {
+int __io_putchar(int c){
+  if(c == '\n'){
     int _c = '\r';
     HAL_UART_Transmit(&huart1, &_c, 1, 1);
   }
@@ -146,8 +150,7 @@ int __io_putchar(int c) {
   return 0;
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	TIM_OC_InitTypeDef ConfigOC;
 	ConfigOC.OCMode = TIM_OCMODE_PWM1;
 	ConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
@@ -275,30 +278,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		}
 	}
 }
-
-uint8_t read_byte(uint8_t reg)
-{
-  uint8_t ret,val;
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET ); //cs = Low;
-  ret = reg | 0x80;  // MSB = 1
-  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
-  HAL_SPI_Receive(&hspi3,&val,1,100); // read 1byte(read data)
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET );  //cs = High;
-  return val;
-}
-
-void write_byte( uint8_t reg, uint8_t val )
-{
-  uint8_t ret;
-  ret = reg & 0x7F ; // MSB = 0
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET); // cs = Low;
-  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
-  HAL_SPI_Transmit(&hspi3, &val,1,100); // read 1byte(write data)
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET); // cs = High;
-}
-
-void icm20689_init( void )
-{
+/*
+void icm20689_init(void){
   uint8_t who_am_i;
 
   HAL_Delay(100); // wait start up
@@ -324,8 +305,26 @@ void icm20689_init( void )
   HAL_Delay(50);
 }
 
-float icm20689_read_gyro_z( void )
-{
+uint8_t read_byte(uint8_t reg){
+  uint8_t ret,val;
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET ); //cs = Low;
+  ret = reg | 0x80;  // MSB = 1
+  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
+  HAL_SPI_Receive(&hspi3,&val,1,100); // read 1byte(read data)
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET );  //cs = High;
+  return val;
+}
+
+void write_byte(uint8_t reg, uint8_t val){
+  uint8_t ret;
+  ret = reg & 0x7F ; // MSB = 0
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET); // cs = Low;
+  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
+  HAL_SPI_Transmit(&hspi3, &val,1,100); // read 1byte(write data)
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET); // cs = High;
+}
+
+float icm20689_read_gyro_z(void){
   int16_t gyro_z;
   float omega;
 
@@ -333,10 +332,9 @@ float icm20689_read_gyro_z( void )
   gyro_z = (int16_t)( (int16_t)(read_byte(GYRO_ZOUT_H) << 8 ) | read_byte(GYRO_ZOUT_L) );
 
   omega = (float)( gyro_z / GYRO_FACTOR ); // dps to deg/sec
-
   return omega;
 }
-
+*/
 /* USER CODE END 0 */
 
 /**
@@ -1963,6 +1961,62 @@ int get_adc_value(ADC_HandleTypeDef *hadc, uint32_t channel){
 	printf("ADC CH3 Value is %d\r\n",aADCxConvertedData[3]);
 }
 */
+
+void icm20689_init(void){
+  uint8_t who_am_i;
+
+  HAL_Delay(100); // wait start up
+  who_am_i = read_byte(WHO_AM_I); // 1. read who am i
+  printf("\r\n0x%x\r\n",who_am_i); // 2. check who am i value
+
+  // 2. error check
+  if (who_am_i != 0x98){
+    while(1){
+      printf( "gyro_error\r");
+    }
+  }
+
+  HAL_Delay(50); // wait
+  write_byte(PWR_MGMT_1, 0x00); // 3. set pwr_might
+
+  HAL_Delay(50);
+  write_byte(CONFIG, 0x00); // 4. set config
+
+  HAL_Delay(50);
+  write_byte(GYRO_CONFIG, 0x18); // 5. set gyro config
+
+  HAL_Delay(50);
+}
+
+uint8_t read_byte(uint8_t reg){
+  uint8_t ret,val;
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET ); //cs = Low;
+  ret = reg | 0x80;  // MSB = 1
+  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
+  HAL_SPI_Receive(&hspi3,&val,1,100); // read 1byte(read data)
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET );  //cs = High;
+  return val;
+}
+
+void write_byte(uint8_t reg, uint8_t val){
+  uint8_t ret;
+  ret = reg & 0x7F ; // MSB = 0
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET); // cs = Low;
+  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
+  HAL_SPI_Transmit(&hspi3, &val,1,100); // read 1byte(write data)
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET); // cs = High;
+}
+
+float icm20689_read_gyro_z(void){
+  int16_t gyro_z;
+  float omega;
+
+  // H:8bit shift, Link h and l
+  gyro_z = (int16_t)( (int16_t)(read_byte(GYRO_ZOUT_H) << 8 ) | read_byte(GYRO_ZOUT_L) );
+
+  omega = (float)( gyro_z / GYRO_FACTOR ); // dps to deg/sec
+  return omega;
+}
 
 /* USER CODE END 4 */
 

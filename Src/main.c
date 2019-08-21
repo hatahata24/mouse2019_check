@@ -141,6 +141,7 @@ void icm20689_init(void);
 uint8_t read_byte(uint8_t reg);
 void write_byte(uint8_t reg, uint8_t val);
 float icm20689_read_gyro_z(void);
+void drive_dir(uint8_t, uint8_t);
 
 /* USER CODE END PFP */
 
@@ -195,21 +196,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			target_speed_l = max(min(target_speed_l, target_speed_max_l), target_speed_min_l);
 			epsilon_l = target_speed_l - speed_l;
 			pulse_l = Kp * epsilon_l;
-			if(pulse_l < 0){
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-				ConfigOC.Pulse = -pulse_l;
+			if(pulse_l > 0){
+				drive_dir(0, 0);
+				ConfigOC.Pulse = pulse_l;
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 			}
-			else if(pulse_l > 0){
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);	//L_CCW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-				ConfigOC.Pulse = pulse_l;
+			else if(pulse_l < 0){
+				drive_dir(0, 1);
+				ConfigOC.Pulse = -pulse_l;
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 			}
@@ -218,21 +213,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			target_speed_r = max(min(target_speed_r, target_speed_max_r), target_speed_min_r);
 			epsilon_r = target_speed_r - speed_r;
 			pulse_r = Kp * epsilon_r;
-			if(pulse_r < 0){
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-				ConfigOC.Pulse = -pulse_r;
+			if(pulse_r > 0){
+				drive_dir(1, 0);
+				ConfigOC.Pulse = pulse_r;
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
 			}
-			else if(pulse_r > 0){
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);	//R_CCW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-				ConfigOC.Pulse = pulse_r;
+			else if(pulse_r < 0){
+				drive_dir(1, 1);
+				ConfigOC.Pulse = -pulse_r;
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
 			}
@@ -245,9 +234,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 		}else{
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);			//R_CW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);		//R_CCW
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);		//STBY
+			drive_dir(0, 3);
+			drive_dir(1, 3);
 		}
 
 		//gyro interrupt
@@ -265,42 +253,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 			epsilon_l = target_speed_l - speed_l;
 			pulse_l = Kp * epsilon_l;
-			if(pulse_l < 0){
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-				ConfigOC.Pulse = -pulse_l;
+			if(pulse_l > 0){
+				drive_dir(0, 0);
+				ConfigOC.Pulse = pulse_l;
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 			}
-			else if(pulse_l > 0){
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);	//L_CCW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-				ConfigOC.Pulse = pulse_l;
+			else if(pulse_l < 0){
+				drive_dir(0, 1);
+				ConfigOC.Pulse = -pulse_l;
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 			}
 
 			epsilon_r = target_speed_r - speed_r;
 			pulse_r = Kp * epsilon_r;
-			if(pulse_r < 0){
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-				ConfigOC.Pulse = -pulse_r;
+			if(pulse_r > 0){
+				drive_dir(1, 0);
+				ConfigOC.Pulse = pulse_r;
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
 			}
-			else if(pulse_r > 0){
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);	//R_CCW
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
-
-				ConfigOC.Pulse = pulse_r;
+			else if(pulse_r < 0){
+				drive_dir(1, 1);
+				ConfigOC.Pulse = -pulse_r;
 				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
 			}
@@ -314,26 +290,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 		switch(mode){
 		  case 0:
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);  //L
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET); 	//L
 				for(delay=0; delay<sensor_wait; delay++);
-				value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);	//L
+				value4 = get_adc_value(&hadc1, ADC_CHANNEL_3);			//L
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
 
-				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   //R
+				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   	//R
 				for(delay=0; delay<sensor_wait; delay++);
-				value2 = get_adc_value(&hadc1, ADC_CHANNEL_1);	//R
+				value2 = get_adc_value(&hadc1, ADC_CHANNEL_1);			//R
 				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
 			break;
 
 		  case 1:
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);  //FL
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);  	//FL
 				for(delay=0; delay<sensor_wait; delay++);
-				value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);	//FL
+				value3 = get_adc_value(&hadc1, ADC_CHANNEL_2);			//FL
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
 
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   //FR
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);   	//FR
 				for(delay=0; delay<sensor_wait; delay++);
-				value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);	//FR
+				value1 = get_adc_value(&hadc1, ADC_CHANNEL_0);			//FR
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
 			break;
 		}
@@ -1129,7 +1105,7 @@ if(cnt >= 101){
 	while(1);MF.FLAG.DRV = 0;
 */
 
-/*accel & speed control & log get
+//accel & speed control & log get
 	HAL_Delay(500);
 	for(int i = 0; i < 1; i++){
 		MF.FLAG.DRV = 1;
@@ -1160,7 +1136,7 @@ if(cnt >= 101){
 		printf("r:	%d\n", get_speed_r[i]);
 		HAL_Delay(5);
 	}
-*/
+
 
 /*accel & speed control & log get +deaccel
 	HAL_Delay(500);
@@ -1409,7 +1385,7 @@ if(cnt >= 101){
 	HAL_Delay(5);
 */
 
-//enkaigei
+/*enkaigei
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
 	target_degree_z = icm20689_read_gyro_z();
 	accel_l = 3000;
@@ -1417,7 +1393,7 @@ if(cnt >= 101){
 	MF.FLAG.GYR = 1;
 
 	while(1);
-
+*/
 
 	/* USER CODE END WHILE */
 
@@ -2032,6 +2008,49 @@ float icm20689_read_gyro_z(void){
 
   omega = (float)(gyro_z / GYRO_FACTOR + 1.15); // dps to deg/sec
   return omega;
+}
+
+
+//+++++++++++++++++++++++++++++++++++++++++++++++
+//drive_dir
+// wheel turn dir for each wheel
+// hikisuu:1-wheel select(0=>L, 1=>R), 2-dir select(0=>CW, 1=>CWW, 2=>ShortBrake, 3=>free)
+// modorichi: nothing
+//+++++++++++++++++++++++++++++++++++++++++++++++
+void drive_dir(uint8_t wheel, uint8_t dir){
+	if(wheel == 0){
+		if(dir == 0){
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);	//L_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+		}else if(dir == 1){
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+		}else if(dir == 2){
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+		}else{
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);	//STBY
+		}
+	}else{
+		if(dir == 0){
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);	//R_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+		}else if(dir == 1){
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+		}else if(dir == 2){
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+		}else{
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);	//STBY
+		}
+	}
 }
 
 /* USER CODE END 4 */

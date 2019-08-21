@@ -45,6 +45,7 @@
 #define sensor_wait 3000
 #define log_allay 200
 
+//gyro
 #define WHO_AM_I 0x75
 #define PWR_MGMT_1 0x6B
 #define CONFIG 0x1A
@@ -96,6 +97,8 @@ float accel_l = 0;
 float accel_r = 0;
 float current_speed_l = 0;
 float current_speed_r = 0;
+
+float degree_z = 0;
 
 int get_speed_l[log_allay];
 int get_speed_r[log_allay];
@@ -245,6 +248,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);		//STBY
 		}
 
+		//gyro interrupt
+		degree_z += icm20689_read_gyro_z() * 0.001;
+
 
 		//ADchange interrupt
 		uint16_t delay = 0;
@@ -278,63 +284,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 	}
 }
-/*
-void icm20689_init(void){
-  uint8_t who_am_i;
 
-  HAL_Delay(100); // wait start up
-  who_am_i = read_byte(WHO_AM_I); // 1. read who am i
-  printf("\r\n0x%x\r\n",who_am_i); // 2. check who am i value
-
-  // 2. error check
-  if (who_am_i != 0x98){
-    while(1){
-      printf( "gyro_error\r");
-    }
-  }
-
-  HAL_Delay(50); // wait
-  write_byte(PWR_MGMT_1, 0x00); // 3. set pwr_might
-
-  HAL_Delay(50);
-  write_byte(CONFIG, 0x00); // 4. set config
-
-  HAL_Delay(50);
-  write_byte(GYRO_CONFIG, 0x18); // 5. set gyro config
-
-  HAL_Delay(50);
-}
-
-uint8_t read_byte(uint8_t reg){
-  uint8_t ret,val;
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET ); //cs = Low;
-  ret = reg | 0x80;  // MSB = 1
-  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
-  HAL_SPI_Receive(&hspi3,&val,1,100); // read 1byte(read data)
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET );  //cs = High;
-  return val;
-}
-
-void write_byte(uint8_t reg, uint8_t val){
-  uint8_t ret;
-  ret = reg & 0x7F ; // MSB = 0
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET); // cs = Low;
-  HAL_SPI_Transmit(&hspi3, &ret,1,100); // sent 1byte(address)
-  HAL_SPI_Transmit(&hspi3, &val,1,100); // read 1byte(write data)
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET); // cs = High;
-}
-
-float icm20689_read_gyro_z(void){
-  int16_t gyro_z;
-  float omega;
-
-  // H:8bit shift, Link h and l
-  gyro_z = (int16_t)( (int16_t)(read_byte(GYRO_ZOUT_H) << 8 ) | read_byte(GYRO_ZOUT_L) );
-
-  omega = (float)( gyro_z / GYRO_FACTOR ); // dps to deg/sec
-  return omega;
-}
-*/
 /* USER CODE END 0 */
 
 /**
@@ -1397,9 +1347,10 @@ if(cnt >= 101){
 */
 
 //gyro z read
-	int gyro_z2;
-	gyro_z2 = icm20689_read_gyro_z();
-	printf("gyro_z: %d\n", gyro_z2);
+	int gyro_z2, degree_z2;
+	gyro_z2 = icm20689_read_gyro_z() * 10;
+	degree_z2 = degree_z * 10;
+	printf("gyro_z*10: %3d, degree*10: %3d\n", gyro_z2, degree_z2);
 	HAL_Delay(5);
 
 
@@ -2012,9 +1963,9 @@ float icm20689_read_gyro_z(void){
   float omega;
 
   // H:8bit shift, Link h and l
-  gyro_z = (int16_t)( (int16_t)(read_byte(GYRO_ZOUT_H) << 8 ) | read_byte(GYRO_ZOUT_L) );
+  gyro_z = (int16_t)((int16_t)(read_byte(GYRO_ZOUT_H) << 8) | read_byte(GYRO_ZOUT_L));
 
-  omega = (float)( gyro_z / GYRO_FACTOR ); // dps to deg/sec
+  omega = (float)(gyro_z / GYRO_FACTOR + 1.15); // dps to deg/sec
   return omega;
 }
 

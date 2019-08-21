@@ -286,7 +286,7 @@ uint8_t read_byte(uint8_t reg)
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET );  //cs = High;
   return val;
 }
-/*
+
 void write_byte( uint8_t reg, uint8_t val )
 {
   uint8_t ret;
@@ -297,7 +297,7 @@ void write_byte( uint8_t reg, uint8_t val )
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET); // cs = High;
 }
 
-void mpu6500_init( void )
+void icm20689_init( void )
 {
   uint8_t who_am_i;
 
@@ -306,7 +306,7 @@ void mpu6500_init( void )
   printf("\r\n0x%x\r\n",who_am_i); // 2. check who am i value
 
   // 2. error check
-  if (who_am_i != 0x70){
+  if (who_am_i != 0x98){
     while(1){
       printf( "gyro_error\r");
     }
@@ -324,7 +324,7 @@ void mpu6500_init( void )
   HAL_Delay(50);
 }
 
-float mpu6500_read_gyro_z( void )
+float icm20689_read_gyro_z( void )
 {
   int16_t gyro_z;
   float omega;
@@ -336,7 +336,7 @@ float mpu6500_read_gyro_z( void )
 
   return omega;
 }
-*/
+
 /* USER CODE END 0 */
 
 /**
@@ -356,7 +356,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  //mpu6500_init();
 
   /* USER CODE END Init */
 
@@ -378,6 +377,7 @@ int main(void)
   MX_TIM3_Init();
   MX_SPI3_Init();
   /* USER CODE BEGIN 2 */
+  icm20689_init();
 
   printf("Welcome to WMMC !\n");
 
@@ -1373,7 +1373,7 @@ if(cnt >= 101){
 	}
 */
 
-//gyro who am i check
+/*gyro who am i check
 	uint8_t who_am_i;
 
 	HAL_Delay(100); // wait start up
@@ -1385,13 +1385,25 @@ if(cnt >= 101){
 			printf( "gyro_error\r");
 		}
 	}
+	HAL_Delay(50); // wait
+	write_byte(PWR_MGMT_1, 0x00); // 3. set pwr_might
 
+	HAL_Delay(50);
+	write_byte(CONFIG, 0x00); // 4. set config
 
-/*gyro z read
-	int gyro_z2;
-	gyro_z2 = mpu6500_read_gyro_z();
-	printf("gyro_z: %d\n", gyro_z2);
+	HAL_Delay(50);
+	write_byte(GYRO_CONFIG, 0x18); // 5. set gyro config
+
+	HAL_Delay(50);
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
 */
+
+//gyro z read
+	int gyro_z2;
+	gyro_z2 = icm20689_read_gyro_z();
+	printf("gyro_z: %d\n", gyro_z2);
+	HAL_Delay(5);
+
 
 	/* USER CODE END WHILE */
 

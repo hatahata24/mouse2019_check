@@ -15,7 +15,7 @@ typedef union {					//
 		uint16_t CTRL:1;		//control flag(B3)
 		uint16_t DRV:1;			//drive flag(B4)
 		uint16_t LOG:1;			//log flag(B5)
-		uint16_t RSV6:1;		//デフォルトインターバルフラグ(B6)
+		uint16_t GYR:1;			//gyro flag(B6)
 		uint16_t RSV7:1;		//スラロームフラグ(B7)
 		uint16_t RSV8:1;		//旧走行モードフラグ(B8)
 		uint16_t RSV9:1;		//走行開始時加速判断フラグ(B9)

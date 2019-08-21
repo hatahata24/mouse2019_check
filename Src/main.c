@@ -95,10 +95,12 @@ float pulse_l, pulse_r;
 
 float accel_l = 0;
 float accel_r = 0;
-float current_speed_l = 0;
-float current_speed_r = 0;
+float target_speed_l = 0;
+float target_speed_r = 0;
 
 float degree_z = 0;
+float target_degree_z = 0;
+float target_dist = 0;
 
 int get_speed_l[log_allay];
 int get_speed_r[log_allay];
@@ -189,9 +191,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		TIM8 -> CNT = 0;
 
 		if(MF.FLAG.DRV){
-			current_speed_l = current_speed_l + accel_l * 0.001;
-			current_speed_l = max(min(current_speed_l, target_speed_max_l), target_speed_min_l);
-			epsilon_l = current_speed_l - speed_l;
+			target_speed_l += accel_l * 0.001;
+			target_speed_l = max(min(target_speed_l, target_speed_max_l), target_speed_min_l);
+			epsilon_l = target_speed_l - speed_l;
 			pulse_l = Kp * epsilon_l;
 			if(pulse_l < 0){
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
@@ -212,9 +214,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 			}
 
-			current_speed_r = current_speed_r + accel_r * 0.001;
-			current_speed_r = max(min(current_speed_r, target_speed_max_r), target_speed_min_r);
-			epsilon_r = current_speed_r - speed_r;
+			target_speed_r += accel_r * 0.001;
+			target_speed_r = max(min(target_speed_r, target_speed_max_r), target_speed_min_r);
+			epsilon_r = target_speed_r - speed_r;
 			pulse_r = Kp * epsilon_r;
 			if(pulse_r < 0){
 				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
@@ -250,6 +252,59 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 		//gyro interrupt
 		degree_z += icm20689_read_gyro_z() * 0.001;
+
+		if(MF.FLAG.GYR){
+			target_dist = TREAD*M_PI/360*(degree_z-target_degree_z);
+			if(target_dist > 0){
+				target_speed_l = sqrt(2*accel_l*target_dist);
+				target_speed_r = -1 * target_speed_l;
+			}else{
+				target_speed_l = sqrt(2*accel_l*target_dist*-1)*-1;
+				target_speed_r = -1 * target_speed_l;
+			}
+
+			epsilon_l = target_speed_l - speed_l;
+			pulse_l = Kp * epsilon_l;
+			if(pulse_l < 0){
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);	//L_CW
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);		//L_CCW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+				ConfigOC.Pulse = -pulse_l;
+				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
+				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+			}
+			else if(pulse_l > 0){
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);		//L_CW
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);	//L_CCW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+				ConfigOC.Pulse = pulse_l;
+				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_1);
+				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+			}
+
+			epsilon_r = target_speed_r - speed_r;
+			pulse_r = Kp * epsilon_r;
+			if(pulse_r < 0){
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);	//R_CW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);	//R_CCW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+				ConfigOC.Pulse = -pulse_r;
+				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
+				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
+			}
+			else if(pulse_r > 0){
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);		//R_CW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);	//R_CCW
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);		//STBY
+
+				ConfigOC.Pulse = pulse_r;
+				HAL_TIM_PWM_ConfigChannel(&htim2, &ConfigOC, TIM_CHANNEL_4);
+				HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
+			}
+		}
 
 
 		//ADchange interrupt
@@ -1346,12 +1401,22 @@ if(cnt >= 101){
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
 */
 
-//gyro z read
+/*gyro z read
 	int gyro_z2, degree_z2;
 	gyro_z2 = icm20689_read_gyro_z() * 10;
 	degree_z2 = degree_z * 10;
 	printf("gyro_z*10: %3d, degree*10: %3d\n", gyro_z2, degree_z2);
 	HAL_Delay(5);
+*/
+
+//enkaigei
+	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
+	target_degree_z = icm20689_read_gyro_z();
+	accel_l = 3000;
+
+	MF.FLAG.GYR = 1;
+
+	while(1);
 
 
 	/* USER CODE END WHILE */

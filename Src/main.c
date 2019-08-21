@@ -101,6 +101,7 @@ float target_speed_r = 0;
 float degree_z = 0;
 float target_degree_z = 0;
 float target_dist = 0;
+float target_omega_z = 0;
 
 int get_speed_l[log_allay];
 int get_speed_r[log_allay];
@@ -234,8 +235,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 		}else{
-			drive_dir(0, 3);
-			drive_dir(1, 3);
+			drive_dir(0, 2);
+			drive_dir(1, 2);
 		}
 
 		//gyro interrupt
@@ -1105,7 +1106,7 @@ if(cnt >= 101){
 	while(1);MF.FLAG.DRV = 0;
 */
 
-//accel & speed control & log get
+/*accel & speed control & log get
 	HAL_Delay(500);
 	for(int i = 0; i < 1; i++){
 		MF.FLAG.DRV = 1;
@@ -1136,7 +1137,7 @@ if(cnt >= 101){
 		printf("r:	%d\n", get_speed_r[i]);
 		HAL_Delay(5);
 	}
-
+*/
 
 /*accel & speed control & log get +deaccel
 	HAL_Delay(500);
@@ -1394,6 +1395,19 @@ if(cnt >= 101){
 
 	while(1);
 */
+
+//new turn Right
+	MF.FLAG.DRV = 1;
+	target_omega_z = 400;
+	accel_l = 3000;
+	accel_r = -3000;
+	target_speed_max_l = target_omega_z/180*M_PI * TREAD/2;
+	target_speed_min_r = -1*target_omega_z/180*M_PI * TREAD/2;
+
+	while(degree_z > -90);
+
+	MF.FLAG.DRV = 0;
+	while(1);
 
 	/* USER CODE END WHILE */
 

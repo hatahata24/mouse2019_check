@@ -89,24 +89,24 @@ int mode = 0;
 int cnt = 0;
 int get_cnt = 0;
 
-float target_speed_min_l = 0;
-float target_speed_max_l = 0;
-float target_speed_min_r = 0;
-float target_speed_max_r = 0;
+float speed_min_l = 0;
+float speed_max_l = 0;
+float speed_min_r = 0;
+float speed_max_r = 0;
 float pulse_l, pulse_r;
 
 float accel_l = 0;
 float accel_r = 0;
 float target_speed_l = 0;
 float target_speed_r = 0;
+float target_dist = 0;
 
 float degree_z = 0;
 float target_degree_z = 0;
-float target_dist = 0;
 float target_omega_z = 0;
 float target_degaccel_z = 0;
-float target_omega_min = 0;
-float target_omega_max = 0;
+float omega_min = 0;
+float omega_max = 0;
 
 int get_speed_l[log_allay];
 int get_speed_r[log_allay];
@@ -143,10 +143,10 @@ static void MX_SPI3_Init(void);
 /* USER CODE BEGIN PFP */
 void buzzer(int, int);
 int get_adc_value(ADC_HandleTypeDef*, uint32_t);
-void icm20689_init(void);
+void gyro_init(void);
 uint8_t read_byte(uint8_t reg);
 void write_byte(uint8_t reg, uint8_t val);
-float icm20689_read_gyro_z(void);
+float gyro_read_z(void);
 void drive_dir(uint8_t, uint8_t);
 
 /* USER CODE END PFP */
@@ -199,7 +199,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 		if(MF.FLAG.DRV){
 			target_speed_l += accel_l * 0.001;
-			target_speed_l = max(min(target_speed_l, target_speed_max_l), target_speed_min_l);
+			target_speed_l = max(min(target_speed_l, speed_max_l), speed_min_l);
 			epsilon_l = target_speed_l - speed_l;
 			pulse_l = Kp * epsilon_l;
 			if(pulse_l > 0){
@@ -216,7 +216,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 
 			target_speed_r += accel_r * 0.001;
-			target_speed_r = max(min(target_speed_r, target_speed_max_r), target_speed_min_r);
+			target_speed_r = max(min(target_speed_r, speed_max_r), speed_min_r);
 			epsilon_r = target_speed_r - speed_r;
 			pulse_r = Kp * epsilon_r;
 			if(pulse_r > 0){
@@ -245,7 +245,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 
 		//gyro interrupt
-		degree_z += icm20689_read_gyro_z() * 0.001;
+		degree_z += gyro_read_z() * 0.001;
 
 		if(MF.FLAG.ENKAI){
 			target_dist = TREAD*M_PI/360*(degree_z-target_degree_z);
@@ -288,9 +288,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 		}
 
-		if(MF.FLAG.GYR){
+		if(MF.FLAG.GYRO){
 			target_omega_z += target_degaccel_z * 0.001;
-			target_omega_z = max(min(target_omega_z, target_omega_max), target_omega_min);
+			target_omega_z = max(min(target_omega_z, omega_max), omega_min);
 			target_speed_l = speed_G + target_omega_z/180*M_PI*TREAD/2;
 			target_speed_r = speed_G - target_omega_z/180*M_PI*TREAD/2;
 
@@ -399,7 +399,7 @@ int main(void)
   MX_TIM3_Init();
   MX_SPI3_Init();
   /* USER CODE BEGIN 2 */
-  icm20689_init();
+  gyro_init();
 
   printf("Welcome to WMMC !\n");
 
@@ -1155,16 +1155,16 @@ if(cnt >= 101){
 		MF.FLAG.LOG = 1;
 		accel_l = 1000;
 		accel_r = 1000;
-		target_speed_max_l = 500;
-		target_speed_max_r = 500;
+		speed_max_l = 500;
+		speed_max_r = 500;
 		while(dist_l < 300 && dist_r < 300);
 
 		accel_l = 1000;
 		accel_r = 1000;
-		target_speed_max_l = 0;
-		target_speed_max_r = 0;
-		target_speed_min_l = 0;
-		target_speed_min_r = 0;
+		speed_max_l = 0;
+		speed_max_r = 0;
+		speed_min_l = 0;
+		speed_min_r = 0;
 	}
 	MF.FLAG.DRV = 0;
 
@@ -1188,22 +1188,22 @@ if(cnt >= 101){
 		MF.FLAG.LOG = 1;
 		accel_l = 1000;
 		accel_r = 1000;
-		target_speed_max_l = 500;
-		target_speed_max_r = 500;
+		speed_max_l = 500;
+		speed_max_r = 500;
 		while(dist_l < 300 && dist_r < 300);
 
 		accel_l = -1000;
 		accel_r = -1000;
-		target_speed_min_l = -500;
-		target_speed_min_r = -500;
+		speed_min_l = -500;
+		speed_min_r = -500;
 		while(dist_l > -300 && dist_r > -300);
 
 		accel_l = 1000;
 		accel_r = 1000;
-		target_speed_max_l = 0;
-		target_speed_max_r = 0;
-		target_speed_min_l = 0;
-		target_speed_min_r = 0;
+		speed_max_l = 0;
+		speed_max_r = 0;
+		speed_min_l = 0;
+		speed_min_r = 0;
 	}
 	MF.FLAG.DRV = 0;
 
@@ -1250,12 +1250,12 @@ if(cnt >= 101){
 	for(int i = 0; i < 1; i++){
 		accel_l = 3000;
 		accel_r = 0;
-		target_speed_max_l = 200;
-		target_speed_max_r = 0;
+		speed_max_l = 200;
+		speed_max_r = 0;
 		while(dist_l < (TREAD*2*M_PI/4)*1.1);
 
 		accel_l = -3000;
-		target_speed_max_l = 0;
+		speed_max_l = 0;
 		//dist_l = 0;
 		//dist_r = 0;
 	}
@@ -1274,8 +1274,8 @@ if(cnt >= 101){
 	for(int i = 0; i < 1; i++){
 		accel_l = 10000;
 		accel_r = -10000;
-		target_speed_max_l = 200;
-		target_speed_min_r = -200;
+		speed_max_l = 200;
+		speed_min_r = -200;
 		while(dist_l < (TREAD*M_PI/4));
 
 		accel_l = -3000;
@@ -1327,24 +1327,24 @@ if(cnt >= 101){
 
 		accel_l = 3000;
 		accel_r = 3000;
-		target_speed_max_l = 400;
-		target_speed_max_r = 400;
+		speed_max_l = 400;
+		speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
 		while(dist_l < 110 && dist_r < 110);
 
 		accel_l = 3000;
 		accel_r = -3000;
-		target_speed_max_l = 589;
-		target_speed_min_r = 211;
+		speed_max_l = 589;
+		speed_min_r = 211;
 		dist_l = 0;
 		dist_r = 0;
 		while((dist_l+dist_r)/2 < 110*1);//1.2
 
 		accel_l = -3000;
 		accel_r = 3000;
-		target_speed_min_l = 400;
-		target_speed_max_r = 400;
+		speed_min_l = 400;
+		speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
 		while(dist_l < 110 && dist_r < 110);
@@ -1352,13 +1352,13 @@ if(cnt >= 101){
 	while(1)MF.FLAG.DRV = 0;
 */
 
-/*voltage check
+//voltage check
 	if( HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12) == GPIO_PIN_RESET) {
-	   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+	   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_SET);
 	} else {
-	   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+	   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_RESET);
 	}
-*/
+
 
 /*buzzer
 	buzzer(DO, 500);
@@ -1422,7 +1422,7 @@ if(cnt >= 101){
 
 /*gyro z read
 	int gyro_z2, degree_z2;
-	gyro_z2 = icm20689_read_gyro_z() * 10;
+	gyro_z2 = gyro_read_z() * 10;
 	degree_z2 = degree_z * 10;
 	printf("gyro_z*10: %3d, degree*10: %3d\n", gyro_z2, degree_z2);
 	HAL_Delay(5);
@@ -1430,10 +1430,10 @@ if(cnt >= 101){
 
 /*enkaigei
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
-	target_degree_z = icm20689_read_gyro_z();
+	target_degree_z = degree_z;
 	accel_l = 3000;
 
-	MF.FLAG.GYR = 1;
+	MF.FLAG.ENKAI = 1;
 
 	while(1);
 */
@@ -1446,14 +1446,14 @@ if(cnt >= 101){
 		target_omega_z = 800;
 		accel_l = 3000;
 		accel_r = -3000;
-		target_speed_max_l = target_omega_z/180*M_PI * TREAD/2;
-		target_speed_min_r = -1*target_omega_z/180*M_PI * TREAD/2;
+		speed_max_l = target_omega_z/180*M_PI * TREAD/2;
+		speed_min_r = -1*target_omega_z/180*M_PI * TREAD/2;
 		degree_z = 0;
 		while(degree_z > -80);
 		accel_l = 3000;
 		accel_r = -3000;
-		target_speed_max_l = 100;
-		target_speed_min_r = -100;
+		speed_max_l = 100;
+		speed_min_r = -100;
 		degree_z = 0;
 		while(degree_z > -90+80);
 
@@ -1469,16 +1469,16 @@ if(cnt >= 101){
 
 		accel_l = 3000;
 		accel_r = 3000;
-		target_speed_max_l = 400;
-		target_speed_max_r = 400;
+		speed_max_l = 400;
+		speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
 		while(dist_l < 40 && dist_r < 40);
 
 		accel_l = 10000;
 		accel_r = -10000;
-		target_speed_max_l = 589;
-		target_speed_min_r = 211;
+		speed_max_l = 589;
+		speed_min_r = 211;
 		dist_l = 0;
 		dist_r = 0;
 		degree_z = 0;
@@ -1486,8 +1486,8 @@ if(cnt >= 101){
 
 		accel_l = -10000;
 		accel_r = 10000;
-		target_speed_min_l = 400;
-		target_speed_max_r = 400;
+		speed_min_l = 400;
+		speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
 		while(dist_l < 40 && dist_r < 40);
@@ -1503,16 +1503,16 @@ if(cnt >= 101){
 
 		accel_l = 3000;
 		accel_r = 3000;
-		target_speed_max_l = 400;
-		target_speed_max_r = 400;
+		speed_max_l = 400;
+		speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
 		while(dist_l < 40 && dist_r < 40);
 
 		accel_l = -10000;
 		accel_r = 10000;
-		target_speed_min_l = 211;
-		target_speed_max_r = 589;
+		speed_min_l = 211;
+		speed_max_r = 589;
 		dist_l = 0;
 		dist_r = 0;
 		degree_z = 0;
@@ -1520,8 +1520,8 @@ if(cnt >= 101){
 
 		accel_l = 10000;
 		accel_r = -10000;
-		target_speed_max_l = 400;
-		target_speed_min_r = 400;
+		speed_max_l = 400;
+		speed_min_r = 400;
 		dist_l = 0;
 		dist_r = 0;
 		while(dist_l < 40 && dist_r < 40);
@@ -1529,7 +1529,7 @@ if(cnt >= 101){
 	while(1)MF.FLAG.DRV = 0;
 */
 
-//new new slalom R
+/*new new slalom R
 	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11) == GPIO_PIN_SET);
 	HAL_Delay(500);
 	for(int i = 0; i < 8; i++){
@@ -1538,8 +1538,8 @@ if(cnt >= 101){
 
 		accel_l = 3000;
 		accel_r = 3000;
-		target_speed_max_l = 400;
-		target_speed_max_r = 400;
+		speed_max_l = 400;
+		speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
 		while(dist_l < 18.5 && dist_r < 18.5);
@@ -1547,7 +1547,7 @@ if(cnt >= 101){
 		MF.FLAG.GYR = 1;
 
 		target_degaccel_z = 4000;
-		target_omega_max = 550;
+		omega_max = 550;
 		speed_G = 400;
 		degree_z = 0;
 		while(degree_z > -38.087);
@@ -1555,14 +1555,14 @@ if(cnt >= 101){
 		MF.FLAG.GYR = 1;
 
 		target_degaccel_z = 0;
-		target_omega_max = 550;
+		omega_max = 550;
 		degree_z = 0;
 		while(degree_z > -19);
 		MF.FLAG.DRV = 0;
 		MF.FLAG.GYR = 1;
 
 		target_degaccel_z = -4000;
-		target_omega_max = 550;
+		omega_max = 550;
 		degree_z = 0;
 		while(degree_z > -31.913);
 		MF.FLAG.DRV = 1;
@@ -1570,17 +1570,16 @@ if(cnt >= 101){
 
 		accel_l = 3000;
 		accel_r = 3000;
-		target_speed_max_l = 400;
-		target_speed_max_r = 400;
+		speed_max_l = 400;
+		speed_max_r = 400;
 		dist_l = 0;
 		dist_r = 0;
 		while(dist_l < 18.5 && dist_r < 18.5);
 	}
 	while(1)MF.FLAG.DRV = 0;
+*/
 
-
-
-	/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -2067,7 +2066,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : PB12 */
   GPIO_InitStruct.Pin = GPIO_PIN_12;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA11 */
@@ -2107,10 +2106,10 @@ void buzzer(int sound, int length){
 
 //+++++++++++++++++++++++++++++++++++++++++++++++
 //get_adc_value
-// ??��?��?定されたチャンネルのアナログ電圧値を取り�???��?��??��?��?
-// 引数1???��?��??��?��hadc …… 電圧値を取り�???��?��すチャンネルが属すADCのHandler
-// 引数2???��?��??��?��channel …… 電圧値を取り�???��?��すチャンネル
-// 戻り�???��?��???��?��??��?��電圧値???��?��?12bit??��?��?解能???��?��?
+// ???��?��??��?��?定されたチャンネルのアナログ電圧値を取り�????��?��??��?��???��?��??��?��?
+// 引数1????��?��??��?��???��?��??��?��hadc …… 電圧値を取り�????��?��??��?��すチャンネルが属すADCのHandler
+// 引数2????��?��??��?��???��?��??��?��channel …… 電圧値を取り�????��?��??��?��すチャンネル
+// 戻り�????��?��??��?��????��?��??��?��???��?��??��?��電圧値????��?��??��?��?12bit???��?��??��?��?解能????��?��??��?��?
 //+++++++++++++++++++++++++++++++++++++++++++++++
 int get_adc_value(ADC_HandleTypeDef *hadc, uint32_t channel){
 
@@ -2125,9 +2124,9 @@ int get_adc_value(ADC_HandleTypeDef *hadc, uint32_t channel){
 
   HAL_ADC_ConfigChannel(hadc, &sConfig);
 
-  HAL_ADC_Start(hadc);                    // AD変換を開始す??��?��?
-  HAL_ADC_PollForConversion(hadc, 100);   // AD変換終�?まで??��?��?機す??��?��?
-  return HAL_ADC_GetValue(hadc);          // AD変換結果を取得す??��?��?
+  HAL_ADC_Start(hadc);                    // AD変換を開始す???��?��??��?��?
+  HAL_ADC_PollForConversion(hadc, 100);   // AD変換終�?まで???��?��??��?��?機す???��?��??��?��?
+  return HAL_ADC_GetValue(hadc);          // AD変換結果を取得す???��?��??��?��?
 }
 
 /*HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
@@ -2139,7 +2138,7 @@ int get_adc_value(ADC_HandleTypeDef *hadc, uint32_t channel){
 }
 */
 
-void icm20689_init(void){
+void gyro_init(void){
   uint8_t who_am_i;
 
   HAL_Delay(100); // wait start up
@@ -2184,7 +2183,7 @@ void write_byte(uint8_t reg, uint8_t val){
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET); // cs = High;
 }
 
-float icm20689_read_gyro_z(void){
+float gyro_read_z(void){
   int16_t gyro_z;
   float omega;
 

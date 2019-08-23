@@ -10,13 +10,13 @@ typedef union {					//
 	uint16_t FLAGS;
 	struct ms_flags{			//
 		uint16_t RSV0:1;		//yobi bit(B0)		(:1は1ビット分の意味，ビットフィールド)
-		uint16_t SCND:1;		//niji soukou flag(B1)
-		uint16_t RSV2:1;		//yobi bit(B2)
-		uint16_t CTRL:1;		//control flag(B3)
-		uint16_t DRV:1;			//drive flag(B4)
+		uint16_t DRV:1;			//drive flag(B1)
+		uint16_t WCTRL:1;		//wall control flag(B2)
+		uint16_t GCTRL:1;		//gyro control flag(B3)
+		uint16_t SCND:1;		//niji soukou flag(B4)
 		uint16_t LOG:1;			//log flag(B5)
 		uint16_t ENKAI:1;		//enkaigei flag(B6)
-		uint16_t GYR:1;			//gyro flag(B7)
+		uint16_t GYRO:1;		//gyro flag(B7)
 		uint16_t RSV8:1;		//旧走行モードフラグ(B8)
 		uint16_t RSV9:1;		//走行開始時加速判断フラグ(B9)
 		uint16_t RSV10:1;		//既知区間加速フラグ(B10)
